@@ -1,2 +1,3 @@
 # Assignment2
-Sebuah task golang dari hactiv 8
+By Ricky Romansyah
+Sebuah Assignment 2 Web Dervice With Golang dari hactiv 8
