@@ -17,9 +17,8 @@ type Order struct {
 	DeletedAt    gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty"`
 }
 
-func (i *Order) BeforeCreate(tx *gorm.DB) (err error) {
-
-	_, errCreate := govalidator.ValidateStruct(i)
+func (o *Order) BeforeCreate(tx *gorm.DB) (err error) {
+	_, errCreate := govalidator.ValidateStruct(o)
 	if errCreate != nil {
 		return errCreate
 	}
