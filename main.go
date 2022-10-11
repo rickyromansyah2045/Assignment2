@@ -1,12 +1,11 @@
 package main
 
 import (
-	"assignment-2/databases"
+	"assignment-2/router"
 )
 
 func main() {
-	db := databases.ConnectDB()
+	r := router.StartApp()
 
-	_ = db
-
+	r.Run(":8080")
 }

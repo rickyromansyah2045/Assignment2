@@ -8,7 +8,7 @@ import (
 )
 
 type Order struct {
-	ID           int            `gorm:"primaryKey" json:"id"`
+	ID           uint           `gorm:"primaryKey" json:"id"`
 	CustomerName string         `gorm:"not null;type:varchar(150)" json:"customer_name" valid:"required~customer name is required"`
 	OrderedAt    *time.Time     `gorm:"autoCreateTime" json:"ordered_at"`
 	Items        []Item         `json:"items,omitempty"`
