@@ -12,7 +12,13 @@ type Database struct {
 	db *gorm.DB
 }
 
-func Start() (Database, error) {
+var (
+	db  *gorm.DB
+	err error
+)
+
+func ConnectDB() *gorm.DB {
+
 	var host = "localhost"
 	var port = "5432"
 	var username = "postgres"
@@ -21,23 +27,19 @@ func Start() (Database, error) {
 
 	var conn = fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable", host, username, password, dbname, port)
 
-	db, err := gorm.Open(postgres.Open(conn))
+	db, err := gorm.Open(postgres.Open(conn), &gorm.Config{})
 
 	if err != nil {
-		fmt.Println("Error open connection db", err)
-
-		return Database{}, err
+		fmt.Println("Error open connection db")
+		panic(err.Error())
 	}
 
 	err = db.Debug().AutoMigrate(models.Order{}, models.Item{})
 
 	if err != nil {
-		fmt.Println("Error On migration", err)
-
-		return Database{}, err
+		fmt.Println("Error On migration")
+		panic(err.Error())
 	}
 
-	return Database{
-		db: db,
-	}, nil
+	return db
 }
