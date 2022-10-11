@@ -5,6 +5,7 @@ import (
 	"assignment-2/models"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -34,6 +35,7 @@ func NewOrderController(db *gorm.DB) *OrderController {
 }
 
 func (o *OrderController) CreateOrder(ctx *gin.Context) {
+
 	var newReqOrder ReqOrder
 
 	err := ctx.ShouldBindJSON(&newReqOrder)
@@ -91,13 +93,116 @@ func (o *OrderController) CreateOrder(ctx *gin.Context) {
 }
 
 func (o *OrderController) GetOrders(ctx *gin.Context) {
+	limit := ctx.Query("limit")
+	limitInt := 20
 
+	if limit != "" {
+		l, err := strconv.Atoi(limit)
+		if err == nil {
+			limitInt = l
+		}
+	}
+
+	var orders []models.Order
+	var total int64
+
+	err := o.db.Limit(limitInt).Preload("Items").Find(&orders).Count(&total).Error
+	if err != nil {
+		fmt.Println("Error Get Data")
+		helpers.BadRequestResponse(ctx, err.Error())
+		return
+	}
+
+	helpers.WriteJsonResponse(ctx, http.StatusOK, gin.H{
+		"success": true,
+		"data":    orders,
+		"query": map[string]interface{}{
+			"limit": limitInt,
+			"total": total,
+		},
+	})
 }
 
 func (o *OrderController) UpdatedOrder(ctx *gin.Context) {
+	orderId := ctx.Param("orderId")
+	var newReqOrder ReqOrder
+	var order models.Order
 
+	err := ctx.ShouldBindJSON(&newReqOrder)
+	if err != nil {
+		helpers.BadRequestResponse(ctx, err.Error())
+		return
+	}
+
+	newOrder := models.Order{
+		CustomerName: newReqOrder.CustomerName,
+	}
+
+	err = o.db.Preload("Items").First(&order, orderId).Error
+	if err != nil {
+		if err.Error() == gorm.ErrRecordNotFound.Error() {
+			helpers.NotFoundResponse(ctx, "Order data not found")
+			return
+		}
+		helpers.BadRequestResponse(ctx, err.Error())
+		return
+	}
+
+	err = o.db.Model(&order).Updates(newOrder).Error
+	if err != nil {
+		helpers.BadRequestResponse(ctx, err.Error())
+		return
+	}
+
+	for _, item := range newReqOrder.Items {
+		newItem := models.Item{
+			ItemCode:    item.ItemCode,
+			Description: item.Description,
+			Quantity:    item.Quantity,
+		}
+
+		err = o.db.First(&newItem, "order_id = ?", orderId).Error
+		if err != nil {
+			helpers.BadRequestResponse(ctx, err.Error())
+			return
+		}
+	}
+
+	helpers.WriteJsonResponse(ctx, http.StatusOK, gin.H{
+		"status": true,
+		"result": fmt.Sprintf("OrderId %s has been succesfully updated", orderId),
+	})
 }
 
 func (o *OrderController) DeleteOrder(ctx *gin.Context) {
+	orderId := ctx.Param("orderId")
+	var order models.Order
+	var items []models.Item
 
+	err := o.db.First(&order, orderId).Error
+	if err != nil {
+		if err.Error() == gorm.ErrRecordNotFound.Error() {
+			helpers.NotFoundResponse(ctx, "Order Data Not Found")
+			return
+		}
+		helpers.BadRequestResponse(ctx, err.Error())
+		return
+	}
+
+	err = o.db.Delete(&order).Error
+	if err != nil {
+		if err.Error() == gorm.ErrRecordNotFound.Error() {
+			helpers.NotFoundResponse(ctx, err.Error())
+			return
+		}
+		helpers.BadRequestResponse(ctx, err.Error())
+		return
+	} else {
+		o.db.Where("order_id = ?", order.ID).Delete(&items)
+	}
+
+	helpers.WriteJsonResponse(ctx, http.StatusOK, gin.H{
+		"success": true,
+		"message": fmt.Sprintf("OrderID %d has been successfully deleted", order.ID),
+	})
 }
